@@ -1,0 +1,365 @@
+/* Core Screen Container - Ensures every screen takes up the full phone display */
+.screen-container {
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(255, 255, 255);
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+}
+
+/* NavAR Typography & Colors */
+.text-brand-dark {
+    color: rgb(4, 30, 66); /* The dark navy from the PDF */
+}
+
+.text-gray-light {
+    color: rgb(150, 150, 150);
+}
+
+/* Layout Wrapper */
+.main-layout {
+    flex-grow: 1;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+}
+
+.content-container {
+    flex-grow: 1;
+    width: 100%;
+    min-height: 0;
+    background-color: transparent;
+}
+
+/* Bottom Nav Bar (Pages 2, 3, 6, 9) */
+.bottom-nav-bar {
+    flex-direction: row;
+    height: 90px;
+    flex-shrink: 0;
+    background-color: white;
+    border-top-width: 1px;
+    border-top-color: rgb(235, 235, 235);
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: 10px; /* Safe area for modern phones */
+    padding-top: 6px;
+}
+
+.nav-item {
+    background-color: transparent;
+    border-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 86px;
+    height: 64px;
+    border-radius: 32px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.nav-icon {
+    /* 24x24 keeps icon size proportional inside 86x64 nav buttons. */
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+    -unity-background-scale-mode: scale-to-fit;
+    background-repeat: no-repeat;
+    -unity-background-image-tint-color: rgb(10, 88, 202);
+}
+
+.nav-text {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgb(145, 154, 169);
+}
+
+.nav-icon-home {
+    background-image: url("Icons/mdi--home.svg");
+}
+
+.nav-icon-explore {
+    background-image: url("Icons/mdi--explore.svg");
+}
+
+.nav-icon-saved {
+    background-image: url("Icons/mdi--bookmark.svg");
+}
+
+.nav-icon-settings {
+    background-image: url("Icons/mdi--settings.svg");
+}
+
+/* Active State Colors */
+.nav-item-active {
+    background-color: rgb(10, 88, 202);
+}
+
+.nav-item-active .nav-icon {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+.nav-item-active .nav-text {
+    color: rgb(250, 252, 255);
+}
+
+/* High-contrast mode (applied on root) */
+.high-contrast .screen-container,
+.high-contrast .home-screen,
+.high-contrast .destination-screen,
+.high-contrast .feedback-screen,
+.high-contrast .permission-screen,
+.high-contrast .recovery-screen,
+.high-contrast .settings-screen,
+.high-contrast .coming-soon-screen {
+    background-color: rgb(255, 255, 255);
+}
+
+.high-contrast .home-top-bar,
+.high-contrast .feedback-top-bar,
+.high-contrast .permission-top-bar,
+.high-contrast .recovery-top-bar,
+.high-contrast .settings-top-bar {
+    background-color: rgb(255, 255, 255);
+    border-bottom-color: rgb(0, 0, 0);
+    border-bottom-width: 2px;
+}
+
+.high-contrast .bottom-nav-bar {
+    background-color: rgb(255, 255, 255);
+    border-top-color: rgb(0, 0, 0);
+    border-top-width: 2px;
+}
+
+.high-contrast .nav-icon {
+    -unity-background-image-tint-color: rgb(0, 0, 0);
+}
+
+.high-contrast .nav-text {
+    color: rgb(0, 0, 0);
+}
+
+.high-contrast .nav-item-active {
+    background-color: rgb(0, 0, 0);
+}
+
+.high-contrast .nav-item-active .nav-icon {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+.high-contrast .nav-item-active .nav-text {
+    color: rgb(255, 255, 255);
+}
+
+.high-contrast .search-box {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+}
+
+.high-contrast .search-icon {
+    border-color: rgb(0, 0, 0);
+}
+
+.high-contrast .search-input {
+    color: rgb(0, 0, 0);
+    -unity-font-style: bold;
+}
+
+.high-contrast .category-pill {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+    color: rgb(0, 0, 0);
+    -unity-font-style: bold;
+}
+
+.high-contrast .category-pill-active {
+    background-color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
+}
+
+.high-contrast .feature-card,
+.high-contrast .destination-item,
+.high-contrast .feedback-context-card,
+.high-contrast .permission-tip-card,
+.high-contrast .permission-feature-card,
+.high-contrast .recovery-step-card,
+.high-contrast .settings-card,
+.high-contrast .settings-help-card,
+.high-contrast .coming-soon-card,
+.high-contrast .maintenance-card,
+.high-contrast .quick-card {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+}
+
+.high-contrast .home-btn-primary,
+.high-contrast .feedback-submit,
+.high-contrast .btn-primary,
+.high-contrast .btn-end {
+    background-color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
+}
+
+.high-contrast .home-btn-secondary,
+.high-contrast .btn-rescan {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+    color: rgb(0, 0, 0);
+}
+
+.high-contrast .direction-bar {
+    background-color: rgb(0, 0, 0);
+}
+
+.high-contrast .direction-text {
+    color: rgb(255, 255, 255);
+}
+
+.high-contrast .ar-circle-btn,
+.high-contrast .ar-help-btn,
+.high-contrast .bottom-card {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+    color: rgb(0, 0, 0);
+}
+
+.high-contrast .feedback-chip {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+    color: rgb(0, 0, 0);
+    -unity-font-style: bold;
+}
+
+.high-contrast .feedback-chip-active {
+    background-color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
+}
+
+.high-contrast .feedback-star {
+    -unity-background-image-tint-color: rgb(80, 80, 80);
+}
+
+.high-contrast .feedback-star-on {
+    -unity-background-image-tint-color: rgb(0, 0, 0);
+}
+
+.high-contrast .text-brand-dark,
+.high-contrast .text-gray-light,
+.high-contrast .home-title,
+.high-contrast .home-desc,
+.high-contrast .feature-title,
+.high-contrast .feature-desc,
+.high-contrast .feature-link,
+.high-contrast .destination-name,
+.high-contrast .destination-desc,
+.high-contrast .feedback-title,
+.high-contrast .feedback-subtitle,
+.high-contrast .feedback-question,
+.high-contrast .feedback-context-title,
+.high-contrast .feedback-footnote,
+.high-contrast .permission-title,
+.high-contrast .permission-desc,
+.high-contrast .permission-tip-text,
+.high-contrast .permission-feature-title,
+.high-contrast .permission-feature-desc,
+.high-contrast .recovery-title,
+.high-contrast .recovery-desc,
+.high-contrast .recovery-step-title,
+.high-contrast .recovery-step-body,
+.high-contrast .settings-title,
+.high-contrast .settings-brand,
+.high-contrast .settings-section-label,
+.high-contrast .settings-row-title,
+.high-contrast .settings-row-desc,
+.high-contrast .settings-subtitle,
+.high-contrast .settings-value,
+.high-contrast .coming-soon-title,
+.high-contrast .coming-soon-desc,
+.high-contrast .coming-soon-card-title,
+.high-contrast .coming-soon-card-body {
+    color: rgb(0, 0, 0);
+    -unity-font-style: bold;
+}
+
+.high-contrast .home-brand-text,
+.high-contrast .feature-badge,
+.high-contrast .coming-soon-brand,
+.high-contrast .coming-soon-back {
+    color: rgb(0, 0, 0);
+    -unity-font-style: bold;
+}
+
+.high-contrast .coming-soon-top-bar {
+    background-color: rgb(255, 255, 255);
+    border-bottom-color: rgb(0, 0, 0);
+    border-bottom-width: 2px;
+}
+
+.high-contrast .home-brand-icon,
+.high-contrast .home-icon-glyph,
+.high-contrast .feature-badge-icon {
+    background-color: transparent;
+    -unity-background-image-tint-color: rgb(0, 0, 0);
+}
+
+.high-contrast .coming-soon-icon-core {
+    background-color: rgb(0, 0, 0);
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+.high-contrast .home-icon-circle,
+.high-contrast .coming-soon-icon-circle {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+}
+
+.high-contrast .feature-image-placeholder {
+    background-color: rgb(255, 255, 255);
+    border-width: 2px;
+    border-color: rgb(0, 0, 0);
+}
+
+.high-contrast .coming-soon-return {
+    background-color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
+}
+
+.high-contrast .settings-menu-icon,
+.high-contrast .recovery-menu-icon,
+.high-contrast .permission-send-icon,
+.high-contrast .search-icon,
+.high-contrast .destination-icon-glyph,
+.high-contrast .history-icon,
+.high-contrast .feedback-pin-icon,
+.high-contrast .permission-feature-icon,
+.high-contrast .permission-feature-icon-alt,
+.high-contrast .permission-floating-left,
+.high-contrast .permission-floating-right,
+.high-contrast .settings-row-icon-voice,
+.high-contrast .settings-row-icon-contrast,
+.high-contrast .settings-row-icon-elevator,
+.high-contrast .settings-row-icon-text {
+    -unity-background-image-tint-color: rgb(0, 0, 0);
+}
+
+.high-contrast .permission-icon-core,
+.high-contrast .permission-tip-icon,
+.high-contrast .recovery-icon,
+.high-contrast .recovery-step-icon-pin,
+.high-contrast .recovery-step-icon-qr,
+.high-contrast .recovery-step-icon-map,
+.high-contrast .feedback-image-icon {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}

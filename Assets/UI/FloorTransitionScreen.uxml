@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="GlobalStyle.uss" />
+    <ui:Style src="FloorTransitionScreen.uss" />
+
+    <ui:VisualElement name="FloorTransitionOverlay" class="floor-transition-overlay">
+        <ui:VisualElement class="floor-transition-panel">
+            <ui:Label text="Floor Transition" class="floor-transition-title" />
+            <ui:Label name="FloorTransitionMessage" text="Click the button when you are at the next floor." class="floor-transition-message" />
+            <ui:Button name="BtnConfirmFloorTransition" text="I am at floor" class="floor-transition-confirm-btn" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

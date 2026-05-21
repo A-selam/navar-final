@@ -1,0 +1,29 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="GlobalStyle.uss" />
+    <ui:Style src="ComingSoonScreen.uss" />
+
+    <ui:VisualElement class="coming-soon-screen">
+        <ui:VisualElement class="coming-soon-top-bar">
+            <ui:Button name="BtnComingSoonBack" text="&#x2190;" class="coming-soon-back" />
+            <ui:Label text="NavAR" class="coming-soon-brand" />
+        </ui:VisualElement>
+
+        <ui:ScrollView class="coming-soon-scroll">
+            <ui:VisualElement class="coming-soon-content">
+                <ui:VisualElement class="coming-soon-icon-circle">
+                    <ui:VisualElement class="coming-soon-icon-core" />
+                </ui:VisualElement>
+
+                <ui:Label text="Coming soon" class="coming-soon-title" />
+                <ui:Label text="This feature is in development. We are polishing the experience and will ship it soon." class="coming-soon-desc" />
+
+                <ui:VisualElement class="coming-soon-card">
+                    <ui:Label text="What to expect" class="coming-soon-card-title" />
+                    <ui:Label text="Helpful guidance, polished visuals, and improved reliability across the app." class="coming-soon-card-body" />
+                </ui:VisualElement>
+
+                <ui:Button name="BtnComingSoonReturn" text="Go back" class="coming-soon-return" />
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

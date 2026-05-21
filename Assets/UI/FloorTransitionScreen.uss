@@ -1,0 +1,51 @@
+.floor-transition-overlay {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+
+.floor-transition-panel {
+    max-width: 520px;
+    width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    background-color: rgba(20, 20, 26, 0.92);
+}
+
+.floor-transition-title {
+    color: rgb(255, 255, 255);
+    font-size: 28px;
+    -unity-font-style: bold;
+    margin-bottom: 12px;
+}
+
+.floor-transition-message {
+    color: rgb(255, 255, 255);
+    font-size: 18px;
+    white-space: normal;
+    margin-bottom: 16px;
+}
+
+.floor-transition-confirm-btn {
+    margin-top: 12px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 16px;
+    padding-right: 16px;
+    border-radius: 12px;
+    border-width: 0;
+    background-color: rgb(20, 111, 226);
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    font-size: 16px;
+}
