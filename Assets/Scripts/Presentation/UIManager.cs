@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NavAR.Infrastructure.Navigation;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using NavAR.Core.Navigation; // For graph routing
 using NavAR.Bootstrapper;
@@ -164,6 +165,7 @@ namespace NavAR.Presentation
         private bool _hasLastDynamicUpdatePosition;
         private Vector3 _lastDynamicUpdatePosition;
         private bool _forceDynamicPathRedraw;
+        private List<Vector3> _lastRenderedRoutePath = new List<Vector3>();
         private float _lastOutdoorNavigationClickRealtime = -1f;
         [Header("Guidance")]
         [SerializeField] private bool hapticGuidanceEnabled = true;
@@ -171,6 +173,8 @@ namespace NavAR.Presentation
         [Header("Dynamic Path Smoothing")]
         [SerializeField] private float dynamicPathSmoothingTimeSeconds = 0.3f;
         [SerializeField] private float dynamicPathMinUpdateDistanceMeters = 0.5f;
+
+        private const float NavMeshSampleRadiusMeters = 2.0f;
 
         [Header("Navigation Context Retry")]
         [SerializeField] private float navigationContextResolveTimeoutSeconds = 12f;
@@ -255,6 +259,7 @@ namespace NavAR.Presentation
                 ResetNavigationServiceReferences,
                 EnsureNavigationServices,
                 CalculatePathForCurrentFloor,
+                ResolveRecalcTargetPosition,
                 (path, setNavigating) => StartCoroutine(WaitForAndDrawPath(path, setNavigating)),
                 _navigationSequencer,
                 msg => Debug.Log(msg),
@@ -1525,15 +1530,52 @@ namespace NavAR.Presentation
         {
             if (_hybridCalculator != null)
             {
-                return _hybridCalculator.CalculatePathWithContext(startPos, targetPos, floorId, destinationFloorId, destinationNodeIds);
+                try
+                {
+                    _hybridCalculator.CalculatePathWithContext(startPos, targetPos, floorId, destinationFloorId, destinationNodeIds);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[UIManager] Session route calculation failed: {ex.Message}");
+                }
             }
 
-            if (_pathCalculator != null)
+            var renderPath = CalculateNavMeshRenderPath(startPos, targetPos);
+            if (renderPath != null && renderPath.Count > 0)
             {
-                return _pathCalculator.CalculatePath(startPos, targetPos);
+                return renderPath;
             }
 
-            return null;
+            return _pathCalculator != null ? _pathCalculator.CalculatePath(startPos, targetPos) : null;
+        }
+
+        private List<Vector3> CalculateNavMeshRenderPath(Vector3 startPos, Vector3 targetPos)
+        {
+            var navPath = new NavMeshPath();
+            var validStartPos = startPos;
+            var validTargetPos = targetPos;
+
+            if (NavMesh.SamplePosition(startPos, out var startHit, NavMeshSampleRadiusMeters, NavMesh.AllAreas))
+            {
+                validStartPos = startHit.position;
+            }
+
+            if (NavMesh.SamplePosition(targetPos, out var targetHit, NavMeshSampleRadiusMeters, NavMesh.AllAreas))
+            {
+                validTargetPos = targetHit.position;
+            }
+
+            if (!NavMesh.CalculatePath(validStartPos, validTargetPos, NavMesh.AllAreas, navPath))
+            {
+                return null;
+            }
+
+            if (navPath.status != NavMeshPathStatus.PathComplete || navPath.corners == null || navPath.corners.Length < 2)
+            {
+                return null;
+            }
+
+            return new List<Vector3>(navPath.corners);
         }
 
         /// <summary>
@@ -1555,6 +1597,7 @@ namespace NavAR.Presentation
             try
             {
                 _pathRenderer.DrawPath(pathCorners);
+                CacheLastRenderedRoutePath(pathCorners);
             }
             catch (System.MissingMemberException mme)
             {
@@ -1618,6 +1661,7 @@ namespace NavAR.Presentation
                         }
                         _navigationProgressTracker?.Tick(Camera.main != null ? Camera.main.transform.position : pathCorners[0], Camera.main != null ? Camera.main.transform.forward : Vector3.forward, 0f);
                         _pathRenderer.DrawPath(pathCorners);
+                        CacheLastRenderedRoutePath(pathCorners);
                             if (setNavigatingOnSuccess && _stateManager != null)
                             {
                                 ResetDynamicNavigationSmoothing();
@@ -1661,18 +1705,15 @@ namespace NavAR.Presentation
             var anchorId = _stateManager?.Context?.LastScannedAnchor?.qr_id ?? string.Empty;
             var destination = _stateManager?.Context?.CurrentDestination;
             var destinationId = destination?.destination_id ?? string.Empty;
-            var floorId = _stateManager?.Context?.CurrentFloorId ?? 0;
+            var currentFloorId = _stateManager?.Context?.CurrentFloorId ?? 0;
 
-            _navigationSessionService.StartSession(anchorId, destinationId, floorId);
+            _navigationSessionService.StartSession(anchorId, destinationId, currentFloorId);
 
             var payload = new SessionStartPayload
             {
-                eventType = "navigation_session_start",
-                timestampUtc = DateTime.UtcNow.ToString("o"),
-                sessionId = _navigationSessionService.ActiveSessionId,
-                startQrId = anchorId,
-                destinationId = destinationId,
-                floorId = floorId
+                session_id = _navigationSessionService.ActiveSessionId,
+                qr_id = anchorId,
+                destination_node_id = destinationId
             };
 
             Debug.Log($"[Navigation][SessionStart] {JsonUtility.ToJson(payload, true)}");
@@ -1773,24 +1814,15 @@ namespace NavAR.Presentation
         private void OnSubmitFeedback()
         {
             var feedback = ScreenBinders.Feedback;
-            var destination = _stateManager?.Context?.CurrentDestination;
             var snapshot = _lastNavigationSnapshot;
             var sessionId = _navigationSessionService?.ActiveSessionId ?? snapshot?.SessionId ?? string.Empty;
-            var destinationId = destination?.destination_id ?? snapshot?.DestinationId ?? string.Empty;
-            var destinationName = destination?.name ?? snapshot?.DestinationName ?? string.Empty;
-            var floorId = _stateManager?.Context?.CurrentFloorId ?? snapshot?.FloorId ?? 0;
 
             var payload = new FeedbackPayload
             {
-                eventType = "feedback_submit",
-                timestampUtc = DateTime.UtcNow.ToString("o"),
-                sessionId = sessionId,
-                rating = feedback?.Rating ?? 0,
+                session_id = sessionId,
                 chips = feedback != null ? feedback.SelectedChips.ToArray() : Array.Empty<string>(),
                 comment = feedback?.Comment ?? string.Empty,
-                destinationName = destinationName,
-                destinationId = destinationId,
-                currentFloorId = floorId
+                rating = feedback?.Rating ?? 0
             };
 
             var json = JsonUtility.ToJson(payload, true);
@@ -1908,8 +1940,9 @@ namespace NavAR.Presentation
 
                 var rawPosition = cameraTransform.position;
                 var rawForward = cameraTransform.forward;
+                var targetPos = ResolveRecalcTargetPosition(_stateManager.Context.CurrentDestination);
 
-                _navigationProgressTracker.Tick(rawPosition, rawForward, Time.deltaTime);
+                _navigationProgressTracker?.Tick(rawPosition, rawForward, Time.deltaTime);
 
                 if (!_hasSmoothedCameraPosition)
                 {
@@ -1923,21 +1956,19 @@ namespace NavAR.Presentation
                     _hasLastDynamicUpdatePosition = true;
                 }
 
-                var smoothingTime = Mathf.Max(0.01f, dynamicPathSmoothingTimeSeconds);
-                var smoothingAlpha = 1f - Mathf.Exp(-Time.deltaTime / smoothingTime);
-                _smoothedCameraPosition = Vector3.Lerp(_smoothedCameraPosition, rawPosition, smoothingAlpha);
+                var smoothedPosition = Vector3.Lerp(_smoothedCameraPosition, rawPosition, Time.deltaTime * 5f);
+                _smoothedCameraPosition = smoothedPosition;
 
-                var shouldUpdate = _forceDynamicPathRedraw
-                                   || Vector3.Distance(_lastDynamicUpdatePosition, rawPosition) >= dynamicPathMinUpdateDistanceMeters;
+                var shouldUpdate = Vector3.Distance(_lastDynamicUpdatePosition, smoothedPosition) > 0.05f;
                 if (shouldUpdate)
                 {
-                    var dynamicPath = _navigationProgressTracker.GetDynamicRenderPath(_smoothedCameraPosition);
-                    if (dynamicPath != null && dynamicPath.Count >= 2)
+                    var renderPath = CalculateNavMeshRenderPath(smoothedPosition, targetPos);
+                    if (renderPath != null && renderPath.Count >= 2)
                     {
-                        _pathRenderer.DrawPath(dynamicPath);
-                        _lastDynamicUpdatePosition = rawPosition;
+                        _pathRenderer.DrawPath(renderPath);
+                        CacheLastRenderedRoutePath(renderPath);
+                        _lastDynamicUpdatePosition = smoothedPosition;
                         _hasLastDynamicUpdatePosition = true;
-                        _forceDynamicPathRedraw = false;
                     }
                 }
 
@@ -1981,24 +2012,37 @@ namespace NavAR.Presentation
 
             Debug.Log("[Navigation][Recalc] Triggered by off-route detection.");
             Debug.Log($"[Navigation][Recalc] Current pose=({cam.position.x:F2},{cam.position.y:F2},{cam.position.z:F2}) floor={_stateManager.Context.CurrentFloorId}, destination={destination.destination_id}.");
-            var targetPos = cam.position;
+            var targetPos = ResolveRecalcTargetPosition(destination);
+            var previousPath = SnapshotRoutePath();
+            if (enableUiDiagnostics)
+            {
+                Debug.Log($"[Navigation][Recalc] Target position=({targetPos.x:F2},{targetPos.y:F2},{targetPos.z:F2}), previousPathCorners={previousPath.Count}.");
+            }
             var path = CalculatePathForCurrentFloor(cam.position, targetPos, _stateManager.Context.CurrentFloorId, destination.floor_id, destination.entrance_node_ids);
             if (path == null || path.Count == 0)
             {
                 Debug.LogWarning("[Navigation][Recalc] Recalculation failed: no path returned.");
+                RestorePathFallback(previousPath);
                 return;
             }
 
-            _navigationProgressTracker.InitializeRoute(path, canCompleteNavigation: true);
-            _navigationSessionService?.ResetVisitedNodes();
+            if (_navigationProgressTracker is NavigationProgressTracker trackerImplFromPose)
+            {
+                trackerImplFromPose.InitializeRouteFromPose(path, cam.position, cam.forward, canCompleteNavigation: true);
+            }
+            else
+            {
+                _navigationProgressTracker.InitializeRoute(path, canCompleteNavigation: true);
+            }
             UpdateRouteNodeIdsForSession();
             UpdateNavigationMarkersForActiveRoute();
             if (_navigationProgressTracker is NavigationProgressTracker trackerImpl)
             {
                 trackerImpl.NotifyRouteRecalculated();
             }
+            LogRerouteEngineStatus(path);
             _forceDynamicPathRedraw = true;
-            Debug.Log($"[Navigation][Recalc] Recalculated path with {path.Count} corners and reset route progress.");
+            Debug.Log($"[Navigation][Recalc] Recalculated path with {path.Count} corners while preserving route progress.");
         }
 
         private void SyncNavigationUi()
@@ -2029,6 +2073,7 @@ namespace NavAR.Presentation
             StopDynamicNavigationLoop(clearInstruction: true);
             StopTransitionArrivalWatch();
             _pathRenderer?.ClearPath();
+            _lastRenderedRoutePath.Clear();
             markerManager?.ClearMarkers();
             _navigationProgressTracker?.Reset();
             _navigationSessionService?.ClearSession();
@@ -2063,44 +2108,161 @@ namespace NavAR.Presentation
             };
 
             _navigationSessionService?.MarkCompleted(status);
+            _stateManager.ChangeState(AppState.Feedback);
 
-            var routePayload = new RouteTakenPayload
+            var sessionPayload = new NavigationSessionPayload
             {
-                eventType = "navigation_route",
-                timestampUtc = DateTime.UtcNow.ToString("o"),
-                sessionId = sessionId,
-                destinationId = destinationId,
-                destinationName = destinationName,
-                floorId = floorId,
-                visitedNodeIds = _navigationSessionService?.GetVisitedNodeIds() ?? Array.Empty<string>(),
-                completionStatus = status.ToString()
+                session_id = sessionId,
+                qr_id = _stateManager.Context?.LastScannedAnchor?.qr_id ?? string.Empty,
+                destination_node_id = destinationId,
+                visited_node_ids = ToIntNodeIds(_navigationSessionService?.GetVisitedNodeIds()),
+                ended_at = DateTime.UtcNow.ToString("o")
             };
-            Debug.Log($"[Navigation][Metrics] {JsonUtility.ToJson(routePayload, true)}");
-            _backendApiClient?.SendRouteTaken(routePayload);
+            Debug.Log($"[Navigation][Metrics] {JsonUtility.ToJson(sessionPayload, true)}");
+            if (status == SessionStatus.Cancelled)
+            {
+                _backendApiClient?.SendSessionCancel(sessionPayload);
+            }
+            else
+            {
+                _backendApiClient?.SendSessionEnd(sessionPayload);
+            }
 
             StopDynamicNavigationLoop(clearInstruction: true);
             StopTransitionArrivalWatch();
             _pathRenderer?.ClearPath();
+            _lastRenderedRoutePath.Clear();
             markerManager?.ClearMarkers();
             _navigationProgressTracker?.Reset();
             _stateManager.Context?.ClearSession();
             ResetNavigationServiceReferences();
             RequestFullSceneReset();
-            _stateManager.ChangeState(nextState);
         }
 
-        private void ReturnHomeFromDestinationReached()
+        private void CacheLastRenderedRoutePath(List<Vector3> path)
         {
-            StopDynamicNavigationLoop(clearInstruction: true);
-            StopTransitionArrivalWatch();
-            _pathRenderer?.ClearPath();
-            markerManager?.ClearMarkers();
-            _navigationProgressTracker?.Reset();
-            _navigationSessionService?.ClearSession();
-            _lastNavigationSnapshot = null;
-            ResetFeedbackState();
-            _stateManager?.Context?.ClearSession();
-            SetState(AppState.Home);
+            if (path == null || path.Count == 0)
+            {
+                return;
+            }
+
+            _lastRenderedRoutePath = new List<Vector3>(path);
+        }
+
+        private List<Vector3> SnapshotRoutePath()
+        {
+            return _lastRenderedRoutePath != null && _lastRenderedRoutePath.Count > 0
+                ? new List<Vector3>(_lastRenderedRoutePath)
+                : new List<Vector3>();
+        }
+
+        private void RestorePathFallback(List<Vector3> cachedPath)
+        {
+            if (cachedPath == null || cachedPath.Count < 2)
+            {
+                return;
+            }
+
+            if (_pathRenderer == null && !ResolveNavigationDependencies(logErrorIfMissing: false))
+            {
+                return;
+            }
+
+            _pathRenderer?.DrawPath(cachedPath);
+            CacheLastRenderedRoutePath(cachedPath);
+            Debug.Log($"[Navigation][Recalc] Restored previous route with {cachedPath.Count} corners (no alternative found).");
+        }
+
+        private Vector3 ResolveRecalcTargetPosition(Destination destination)
+        {
+            if (destination != null && destination.entrance_node_ids != null && destination.entrance_node_ids.Count > 0)
+            {
+                var nodePosition = TryResolveDestinationNodePosition(destination.entrance_node_ids);
+                if (nodePosition.HasValue)
+                {
+                    return nodePosition.Value;
+                }
+            }
+
+            if (_lastRenderedRoutePath != null && _lastRenderedRoutePath.Count > 0)
+            {
+                return _lastRenderedRoutePath[_lastRenderedRoutePath.Count - 1];
+            }
+
+            var lastAnchor = _stateManager?.Context?.LastScannedAnchor;
+            if (lastAnchor != null)
+            {
+                return new Vector3(lastAnchor.x, lastAnchor.y, lastAnchor.z);
+            }
+
+            return Vector3.zero;
+        }
+
+        private Vector3? TryResolveDestinationNodePosition(IReadOnlyList<string> destinationNodeIds)
+        {
+            if (_mapRepository == null || destinationNodeIds == null || destinationNodeIds.Count == 0)
+            {
+                return null;
+            }
+
+            var requestedIds = new HashSet<string>(destinationNodeIds.Where(id => !string.IsNullOrWhiteSpace(id)), StringComparer.OrdinalIgnoreCase);
+            if (requestedIds.Count == 0)
+            {
+                return null;
+            }
+
+            for (var floorId = 0; floorId <= 5; floorId++)
+            {
+                var nodes = _mapRepository.GetGraphNodes(floorId);
+                for (var i = 0; i < nodes.Count; i++)
+                {
+                    var node = nodes[i];
+                    if (requestedIds.Contains(node.node_id))
+                    {
+                        return new Vector3(node.x, node.y, node.z);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static int[] ToIntNodeIds(IReadOnlyList<string> nodeIds)
+        {
+            if (nodeIds == null || nodeIds.Count == 0)
+            {
+                return Array.Empty<int>();
+            }
+
+            var parsed = new List<int>();
+            for (var i = 0; i < nodeIds.Count; i++)
+            {
+                if (int.TryParse(nodeIds[i], out var value))
+                {
+                    parsed.Add(value);
+                }
+            }
+
+            return parsed.ToArray();
+        }
+
+        private void LogRerouteEngineStatus(List<Vector3> path)
+        {
+            if (_hybridCalculator == null)
+            {
+                Debug.Log($"[Navigation][Recalc] Engine=NavMeshOnly, corners={path?.Count ?? 0}.");
+                return;
+            }
+
+            var routeNodeIds = _hybridCalculator.GetLastRouteNodeIds();
+            if (routeNodeIds != null && routeNodeIds.Count > 0)
+            {
+                Debug.Log($"[Navigation][Recalc] Engine=GraphNodeRoute, routeNodeIds={routeNodeIds.Count}, firstNode={routeNodeIds[0]}.");
+            }
+            else
+            {
+                Debug.Log($"[Navigation][Recalc] Engine=NavMeshFallback, graph route unavailable, corners={path?.Count ?? 0}.");
+            }
         }
 
         private void OnDestinationGroupSelected(DestinationGroup group)
