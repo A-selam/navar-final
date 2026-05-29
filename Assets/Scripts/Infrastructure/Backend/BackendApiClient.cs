@@ -8,14 +8,18 @@ namespace NavAR.Infrastructure.Backend
 {
     public sealed class BackendApiClient
     {
-        private const string DefaultSessionStartPath = "navigation/session/start";
-        private const string DefaultRoutePath = "navigation/route";
-        private const string DefaultFeedbackPath = "navigation/feedback";
+        private const string DefaultSessionStartPath = "mobile/navigation-sessions/start";
+        private const string DefaultSessionEndPath = "mobile/navigation-sessions/end";
+        private const string DefaultSessionCancelPath = "mobile/navigation-sessions/cancel";
+        private const string DefaultSyncPath = "mobile/sync";
+        private const string DefaultFeedbackPath = "mobile/feedback";
 
         private readonly MonoBehaviour _runner;
         private readonly string _baseUrl;
         private readonly string _sessionStartPath;
-        private readonly string _routePath;
+        private readonly string _sessionEndPath;
+        private readonly string _sessionCancelPath;
+        private readonly string _syncPath;
         private readonly string _feedbackPath;
         private readonly IBackendEventQueue _queue;
         private bool _isFlushing;
@@ -26,14 +30,18 @@ namespace NavAR.Infrastructure.Backend
             string baseUrl,
             IBackendEventQueue queue = null,
             string sessionStartPath = null,
-            string routePath = null,
+            string sessionEndPath = null,
+            string sessionCancelPath = null,
+            string syncPath = null,
             string feedbackPath = null)
         {
             _runner = runner;
             _baseUrl = baseUrl ?? string.Empty;
             _queue = queue;
             _sessionStartPath = string.IsNullOrWhiteSpace(sessionStartPath) ? DefaultSessionStartPath : sessionStartPath;
-            _routePath = string.IsNullOrWhiteSpace(routePath) ? DefaultRoutePath : routePath;
+            _sessionEndPath = string.IsNullOrWhiteSpace(sessionEndPath) ? DefaultSessionEndPath : sessionEndPath;
+            _sessionCancelPath = string.IsNullOrWhiteSpace(sessionCancelPath) ? DefaultSessionCancelPath : sessionCancelPath;
+            _syncPath = string.IsNullOrWhiteSpace(syncPath) ? DefaultSyncPath : syncPath;
             _feedbackPath = string.IsNullOrWhiteSpace(feedbackPath) ? DefaultFeedbackPath : feedbackPath;
         }
 
@@ -52,9 +60,19 @@ namespace NavAR.Infrastructure.Backend
             SendJsonPayload(payload, _sessionStartPath, "SessionStart");
         }
 
-        public void SendRouteTaken(RouteTakenPayload payload)
+        public void SendSessionEnd(NavigationSessionPayload payload)
         {
-            SendJsonPayload(payload, _routePath, "RouteTaken");
+            SendJsonPayload(payload, _sessionEndPath, "SessionEnd");
+        }
+
+        public void SendSessionCancel(NavigationSessionPayload payload)
+        {
+            SendJsonPayload(payload, _sessionCancelPath, "SessionCancel");
+        }
+
+        public void SendSessionSync(MobileSyncPayload payload)
+        {
+            SendJsonPayload(payload, _syncPath, "SessionSync");
         }
 
         public void SendFeedback(FeedbackPayload payload)

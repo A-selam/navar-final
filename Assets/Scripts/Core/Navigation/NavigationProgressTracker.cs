@@ -66,6 +66,30 @@ namespace NavAR.Core.Navigation
             _destinationReachedRaised = false;
         }
 
+        public void InitializeRouteFromPose(List<Vector3> routeCorners, Vector3 userWorldPosition, Vector3 userForward, bool canCompleteNavigation = true)
+        {
+            InitializeRoute(routeCorners, canCompleteNavigation);
+            if (!HasActiveRoute)
+            {
+                return;
+            }
+
+            var flattenedForward = new Vector3(userForward.x, 0f, userForward.z);
+            if (flattenedForward.sqrMagnitude < 0.01f)
+            {
+                flattenedForward = Vector3.forward;
+            }
+            else
+            {
+                flattenedForward.Normalize();
+            }
+
+            var best = FindBestSegment(userWorldPosition, flattenedForward);
+            _activeSegmentIndex = Mathf.Clamp(best.segmentIndex, 0, Mathf.Max(0, _route.Count - 2));
+            _isForward = best.headingDot >= 0f;
+            _lastDirectionSign = _isForward ? 1 : -1;
+        }
+
         public void Reset()
         {
             _route.Clear();
@@ -275,7 +299,7 @@ namespace NavAR.Core.Navigation
             var nextIndex = isForward ? nodeIndex + 1 : nodeIndex - 1;
             if (prevIndex < 0 || nextIndex < 0 || prevIndex >= _route.Count || currentIndex < 0 || currentIndex >= _route.Count || nextIndex >= _route.Count)
             {
-                return useNowWording ? "Continue straight now." : "Continue straight";
+                return null;
             }
 
             var a = Flatten(_route[prevIndex]);
@@ -288,7 +312,7 @@ namespace NavAR.Core.Navigation
 
             if (dot > 0.92f)
             {
-                return useNowWording ? "Continue straight now." : "Continue straight";
+                return null;
             }
 
             if (cross > 0f)

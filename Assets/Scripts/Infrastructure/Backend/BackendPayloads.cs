@@ -1,42 +1,38 @@
 using System;
+using System.Collections.Generic;
 
 namespace NavAR.Infrastructure.Backend
 {
     [Serializable]
     public sealed class SessionStartPayload
     {
-        public string eventType;
-        public string timestampUtc;
-        public string sessionId;
-        public string startQrId;
-        public string destinationId;
-        public int floorId;
+        public string session_id;
+        public string qr_id;
+        public string destination_node_id;
     }
 
     [Serializable]
-    public sealed class RouteTakenPayload
+    public sealed class NavigationSessionPayload
     {
-        public string eventType;
-        public string timestampUtc;
-        public string sessionId;
-        public string destinationId;
-        public string destinationName;
-        public int floorId;
-        public string[] visitedNodeIds;
-        public string completionStatus;
+        public string session_id;
+        public string qr_id;
+        public int[] visited_node_ids;
+        public string destination_node_id;
+        public string ended_at;
+    }
+
+    [Serializable]
+    public sealed class MobileSyncPayload
+    {
+        public List<NavigationSessionPayload> sessions;
     }
 
     [Serializable]
     public sealed class FeedbackPayload
     {
-        public string eventType;
-        public string timestampUtc;
-        public string sessionId;
-        public int rating;
+        public string session_id;
         public string[] chips;
         public string comment;
-        public string destinationName;
-        public string destinationId;
-        public int currentFloorId;
+        public int rating;
     }
 }

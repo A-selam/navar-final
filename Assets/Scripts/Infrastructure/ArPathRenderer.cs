@@ -8,8 +8,8 @@ namespace NavAR.Infrastructure
     [RequireComponent(typeof(LineRenderer))]
     public class ArPathRenderer : MonoBehaviour, IArRenderer
     {
+        [SerializeField] private float pathElevationOffset = 0.05f;
         private LineRenderer lineRenderer;
-        [SerializeField] private float fixedPathHeightMeters = 1f;
 
         void Awake()
         {
@@ -67,15 +67,15 @@ namespace NavAR.Infrastructure
             var renderer = EnsureLineRenderer();
             if (renderer != null)
             {
-                var flattened = new Vector3[pathCorners.Count];
+                var points = new Vector3[pathCorners.Count];
                 for (var i = 0; i < pathCorners.Count; i++)
                 {
-                    var p = pathCorners[i];
-                    flattened[i] = new Vector3(p.x, fixedPathHeightMeters, p.z);
+                    var corner = pathCorners[i];
+                    points[i] = new Vector3(corner.x, corner.y + pathElevationOffset, corner.z);
                 }
 
-                renderer.positionCount = flattened.Length;
-                renderer.SetPositions(flattened);
+                renderer.positionCount = points.Length;
+                renderer.SetPositions(points);
             }
         }
         

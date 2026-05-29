@@ -25,7 +25,7 @@ namespace NavAR.Bootstrapper
 
         [Header("Backend Sync")]
         [SerializeField] private bool enableBackendSync = true;
-        [SerializeField] private string backendBaseUrl = "https://example.com/api";
+        [SerializeField] private string backendBaseUrl = "https://navar-website.onrender.com/api";
 
         private AppStateManager appStateManager;
         private IMapRepository mapRepository;

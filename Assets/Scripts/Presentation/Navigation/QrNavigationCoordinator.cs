@@ -19,6 +19,7 @@ namespace NavAR.Presentation.Navigation
         private readonly Action _resetNavigationServiceReferences;
         private readonly Func<bool> _ensureNavigationServices;
         private readonly Func<Vector3, Vector3, int, int?, IReadOnlyList<string>, List<Vector3>> _calculatePathForCurrentFloor;
+        private readonly Func<Destination, Vector3> _resolveTargetPosition;
         private readonly Action<List<Vector3>, bool> _drawPathAsync;
         private readonly NavigationSequencer _navigationSequencer;
         private readonly Action<string> _log;
@@ -32,6 +33,7 @@ namespace NavAR.Presentation.Navigation
             Action resetNavigationServiceReferences,
             Func<bool> ensureNavigationServices,
             Func<Vector3, Vector3, int, int?, IReadOnlyList<string>, List<Vector3>> calculatePathForCurrentFloor,
+            Func<Destination, Vector3> resolveTargetPosition,
             Action<List<Vector3>, bool> drawPathAsync,
             NavigationSequencer navigationSequencer,
             Action<string> log,
@@ -44,6 +46,7 @@ namespace NavAR.Presentation.Navigation
             _resetNavigationServiceReferences = resetNavigationServiceReferences;
             _ensureNavigationServices = ensureNavigationServices;
             _calculatePathForCurrentFloor = calculatePathForCurrentFloor;
+            _resolveTargetPosition = resolveTargetPosition;
             _drawPathAsync = drawPathAsync;
             _navigationSequencer = navigationSequencer;
             _log = log;
@@ -114,7 +117,7 @@ namespace NavAR.Presentation.Navigation
 
             if (!didRealign)
             {
-                _logError?.Invoke("[UIManager] QR alignment failed or service unavailable after waiting. Returning to QR scan so user can retry recenter.");
+                _logError?.Invoke("[UIManager] QR alignment failed or service unavailable after waiting. Showing Position Lost recovery so user can rescan and retry recenter.");
                 _stateManager.ChangeState(AppState.PositionLost);
                 yield break;
             }
@@ -159,7 +162,7 @@ namespace NavAR.Presentation.Navigation
             }
 
             var startPos = new Vector3(startAnchor.x, startAnchor.y, startAnchor.z);
-            var targetPos = startPos;
+            var targetPos = _resolveTargetPosition != null ? _resolveTargetPosition(destination) : startPos;
             _log?.Invoke($"[UIManager] Calculating path from QR position for floor {_stateManager.Context.CurrentFloorId} to destination on floor {destination.floor_id}.");
             var path = _calculatePathForCurrentFloor(startPos, targetPos, _stateManager.Context.CurrentFloorId, destination.floor_id, destination.entrance_node_ids);
             _log?.Invoke($"[UIManager] Path calculation returned {path?.Count ?? 0} corners.");
