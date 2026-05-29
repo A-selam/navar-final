@@ -19,12 +19,16 @@ namespace NavAR.Presentation.Navigation
                 return;
             }
 
+            var isDirectionalCue = IsDirectionalCue(evt);
+            var shouldSpeak = voiceEnabled && ShouldEmitVoice(evt, isDirectionalCue);
+            var shouldVibrate = hapticsEnabled && ShouldEmitHaptics(evt, isDirectionalCue);
+
             if (!string.IsNullOrWhiteSpace(evt.Message))
             {
                 _instructionPresenter?.SetInstruction(evt.Message, evt.Severity, evt.DistanceMeters);
             }
 
-            if (voiceEnabled)
+            if (shouldSpeak)
             {
                 #if UNITY_EDITOR
                 Debug.Log($"[Guidance][VoiceSim][Editor] {evt.Message}");
@@ -33,7 +37,7 @@ namespace NavAR.Presentation.Navigation
                 #endif
             }
 
-            if (hapticsEnabled && (evt.EventType == GuidanceEventType.ApproachingNode || evt.EventType == GuidanceEventType.ReachedNode || evt.EventType == GuidanceEventType.OffRouteDetected))
+            if (shouldVibrate)
             {
                 Handheld.Vibrate();
             }
@@ -42,6 +46,52 @@ namespace NavAR.Presentation.Navigation
         public void Reset()
         {
             _instructionPresenter?.ClearInstruction();
+        }
+
+        private static bool IsDirectionalCue(GuidanceEvent evt)
+        {
+            if (evt == null || string.IsNullOrWhiteSpace(evt.Message))
+            {
+                return false;
+            }
+
+            var message = evt.Message.ToLowerInvariant();
+            return message.Contains("turn left")
+                   || message.Contains("turn right")
+                   || message.Contains("u-turn")
+                   || message.Contains("uturn");
+        }
+
+        private static bool ShouldEmitVoice(GuidanceEvent evt, bool isDirectionalCue)
+        {
+            switch (evt.EventType)
+            {
+                case GuidanceEventType.ApproachingNode:
+                case GuidanceEventType.TurnInstructionReady:
+                    return isDirectionalCue;
+                case GuidanceEventType.OffRouteDetected:
+                case GuidanceEventType.RouteRecalculated:
+                case GuidanceEventType.DestinationReached:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool ShouldEmitHaptics(GuidanceEvent evt, bool isDirectionalCue)
+        {
+            switch (evt.EventType)
+            {
+                case GuidanceEventType.ApproachingNode:
+                case GuidanceEventType.TurnInstructionReady:
+                    return isDirectionalCue;
+                case GuidanceEventType.OffRouteDetected:
+                case GuidanceEventType.RouteRecalculated:
+                case GuidanceEventType.DestinationReached:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

@@ -495,7 +495,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &832575518
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -540,7 +540,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57b50220db897f24fa881e69045df6b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NavAR.Infrastructure.ArPathRenderer
-  fixedPathHeightMeters: 1
 --- !u!120 &832575521
 LineRenderer:
   serializedVersion: 2
@@ -858,6 +857,7 @@ GameObject:
   - component: {fileID: 1152749045}
   - component: {fileID: 1152749044}
   - component: {fileID: 1152749043}
+  - component: {fileID: 1152749049}
   - component: {fileID: 1152749042}
   m_Layer: 0
   m_Name: Main Camera
@@ -1140,6 +1140,23 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &1152749049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1152749040}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b15f82cc229284894964d2d30806969d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.AROcclusionManager
+  m_HumanSegmentationStencilMode: 0
+  m_HumanSegmentationDepthMode: 0
+  m_EnvironmentDepthMode: 3
+  m_EnvironmentDepthTemporalSmoothing: 1
+  m_OcclusionPreferenceMode: 0
 --- !u!1 &1277480357
 GameObject:
   m_ObjectHideFlags: 0

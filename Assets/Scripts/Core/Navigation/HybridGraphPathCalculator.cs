@@ -89,17 +89,28 @@ namespace NavAR.Core.Navigation
                     // otherwise return full graph path.
                     if (graphResult.HasFloorTransition && graphResult.PrimaryStageCorners.Count > 0)
                     {
+                        var navMeshPrimaryStagePath = BuildNavMeshConstrainedPath(graphResult.PrimaryStageCorners);
+
                         if (_enableDiagnostics)
                         {
                             Debug.Log(
                                 $"[HybridGraphPathCalculator] Graph routing valid with floor transition. " +
                                 $"Returning primary stage path with {graphResult.PrimaryStageCorners.Count} corners."
                             );
-                            Debug.Log($"[HybridGraphPathCalculator] Path corners: {FormatCorners(graphResult.PrimaryStageCorners)}");
+                            Debug.Log(
+                                $"[HybridGraphPathCalculator] Primary stage render path source=" +
+                                $"{(navMeshPrimaryStagePath != null ? "NavMesh-constrained" : "Graph-direct")}."
+                            );
+                            Debug.Log(
+                                $"[HybridGraphPathCalculator] Path corners: " +
+                                $"{FormatCorners(navMeshPrimaryStagePath ?? graphResult.PrimaryStageCorners)}"
+                            );
                         }
                         CaptureNodeIdsForPrimaryStage(graphResult);
-                        return graphResult.PrimaryStageCorners;
+                        return navMeshPrimaryStagePath ?? graphResult.PrimaryStageCorners;
                     }
+
+                    var navMeshFullPath = BuildNavMeshConstrainedPath(graphResult.PathCorners);
 
                     if (_enableDiagnostics)
                     {
@@ -107,10 +118,17 @@ namespace NavAR.Core.Navigation
                             $"[HybridGraphPathCalculator] Graph routing valid (no transition). " +
                             $"Returning full graph path with {graphResult.PathCorners.Count} corners."
                         );
-                        Debug.Log($"[HybridGraphPathCalculator] Path corners: {FormatCorners(graphResult.PathCorners)}");
+                        Debug.Log(
+                            $"[HybridGraphPathCalculator] Full render path source=" +
+                            $"{(navMeshFullPath != null ? "NavMesh-constrained" : "Graph-direct")}."
+                        );
+                        Debug.Log(
+                            $"[HybridGraphPathCalculator] Path corners: " +
+                            $"{FormatCorners(navMeshFullPath ?? graphResult.PathCorners)}"
+                        );
                     }
                     CaptureNodeIdsForFullPath(graphResult);
-                    return graphResult.PathCorners;
+                    return navMeshFullPath ?? graphResult.PathCorners;
                 }
 
                 if (_enableDiagnostics)
@@ -210,6 +228,43 @@ namespace NavAR.Core.Navigation
             }
 
             return string.Join(" -> ", corners.ConvertAll(corner => $"({corner.x:F2},{corner.y:F2},{corner.z:F2})"));
+        }
+
+        private List<Vector3> BuildNavMeshConstrainedPath(List<Vector3> waypoints)
+        {
+            if (waypoints == null || waypoints.Count < 2)
+            {
+                return null;
+            }
+
+            var stitched = new List<Vector3>();
+
+            for (var i = 0; i < waypoints.Count - 1; i++)
+            {
+                var segmentPath = _navMeshCalculator.CalculatePath(waypoints[i], waypoints[i + 1]);
+                if (segmentPath == null || segmentPath.Count < 2)
+                {
+                    if (_enableDiagnostics)
+                    {
+                        Debug.LogWarning(
+                            $"[HybridGraphPathCalculator] NavMesh refinement failed for graph segment {i} -> {i + 1}. " +
+                            "Falling back to graph corners."
+                        );
+                    }
+                    return null;
+                }
+
+                for (var cornerIndex = 0; cornerIndex < segmentPath.Count; cornerIndex++)
+                {
+                    if (i > 0 && cornerIndex == 0)
+                    {
+                        continue;
+                    }
+                    stitched.Add(segmentPath[cornerIndex]);
+                }
+            }
+
+            return stitched.Count >= 2 ? stitched : null;
         }
 
         public bool TryGetPendingTransition(
