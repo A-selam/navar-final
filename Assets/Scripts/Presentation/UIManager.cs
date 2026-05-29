@@ -2285,5 +2285,19 @@ namespace NavAR.Presentation
 
             OnDestinationSelected(bestEntrance);
         }
+
+private void ReturnHomeFromDestinationReached()
+        {
+            StopDynamicNavigationLoop(clearInstruction: true);
+            StopTransitionArrivalWatch();
+            _pathRenderer?.ClearPath();
+            markerManager?.ClearMarkers();
+            _navigationProgressTracker?.Reset();
+            _navigationSessionService?.ClearSession();
+            _lastNavigationSnapshot = null;
+            ResetFeedbackState();
+            _stateManager?.Context?.ClearSession();
+            SetState(AppState.Home);
+        }
     }
 }
