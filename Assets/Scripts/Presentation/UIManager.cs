@@ -347,7 +347,7 @@ namespace NavAR.Presentation
                 [AppState.Navigating] = new NavigatingScreenPresenter(arNavigationAsset, SetState, () => _lastNonOverlayState, OnToggleVoiceGuidance, OnOpenFloorMap, EndNavigationEarly),
                 [AppState.PositionLost] = new PositionLostScreenPresenter(positionLostAsset, SetState),
                 [AppState.Settings] = new SettingsScreenPresenter(settingsScreenAsset, SetState, null, OnOpenAboutPanel, OnOpenHelpPanel, ApplySettings),
-                [AppState.Feedback] = new FeedbackScreenPresenter(feedbackScreenAsset, SetState, () => _lastNonOverlayState, OnSubmitFeedback)
+                [AppState.Feedback] = new FeedbackScreenPresenter(feedbackScreenAsset, SetState, () => _lastNonOverlayState, OnSubmitFeedback, OnSkipFeedback)
             };
         }
 
@@ -364,6 +364,7 @@ namespace NavAR.Presentation
                 return;
             }
 
+            PrepareFeedbackContext();
             SetState(AppState.Feedback);
         }
 
@@ -850,7 +851,7 @@ namespace NavAR.Presentation
             _screenStateMachine.RegisterAllowedTransition(AppState.FloorTransition, AppState.Navigating, AppState.Home);
             _screenStateMachine.RegisterAllowedTransition(AppState.PositionLost, AppState.QrScanning, AppState.Navigating, AppState.Home);
             _screenStateMachine.RegisterAllowedTransition(AppState.Settings, AppState.Home, AppState.Explore, AppState.Navigating, AppState.ComingSoon);
-            _screenStateMachine.RegisterAllowedTransition(AppState.DestinationReached, AppState.Home);
+            _screenStateMachine.RegisterAllowedTransition(AppState.DestinationReached, AppState.Home, AppState.Feedback);
             _screenStateMachine.RegisterAllowedTransition(AppState.Feedback, AppState.Home, AppState.Explore, AppState.Navigating);
             _screenStateMachine.RegisterAllowedTransition(AppState.ComingSoon, AppState.Home, AppState.Explore, AppState.Navigating, AppState.Settings, AppState.Feedback);
 
@@ -979,6 +980,16 @@ namespace NavAR.Presentation
             if (returnButton != null)
             {
                 returnButton.clicked += ReturnHomeFromDestinationReached;
+            }
+
+            var feedbackButton = instance.Q<Button>("BtnFeedbackFromDestinationReached");
+            if (feedbackButton != null)
+            {
+                feedbackButton.clicked += () =>
+                {
+                    PrepareFeedbackContext();
+                    SetState(AppState.Feedback);
+                };
             }
 
             _contentContainer.Add(instance);
@@ -1313,9 +1324,35 @@ namespace NavAR.Presentation
                 return;
             }
 
-            if (_stateManager.CurrentState == AppState.Home)
+            if (outdoorMapController != null && outdoorMapController.IsOpen)
+            {
+                outdoorMapController.CloseOutdoorMap();
+                return;
+            }
+
+            var currentState = _stateManager.CurrentState;
+
+            if (currentState == AppState.Home)
             {
                 ShowExitPrompt();
+                return;
+            }
+
+            if (currentState == AppState.Feedback)
+            {
+                OnSkipFeedback();
+                return;
+            }
+
+            if (currentState == AppState.DestinationReached)
+            {
+                ReturnHomeFromDestinationReached();
+                return;
+            }
+
+            if (currentState == AppState.Navigating)
+            {
+                EndNavigationEarly();
                 return;
             }
 
@@ -1690,6 +1727,30 @@ namespace NavAR.Presentation
             feedback.Rating = 0;
             feedback.SelectedChips.Clear();
             feedback.Comment = string.Empty;
+            feedback.ContextTitle = "No active route";
+            feedback.ContextMeta = "Optional report context";
+        }
+
+        private void PrepareFeedbackContext()
+        {
+            var feedback = ScreenBinders.Feedback;
+            if (feedback == null)
+            {
+                return;
+            }
+
+            var destination = _stateManager?.Context?.CurrentDestination;
+            var snapshot = _lastNavigationSnapshot;
+            var destinationName = destination?.name ?? snapshot?.DestinationName;
+
+            feedback.ContextTitle = string.IsNullOrWhiteSpace(destinationName)
+                ? "Navigation session"
+                : destinationName;
+
+            var floorId = _stateManager?.Context?.CurrentFloorId ?? snapshot?.FloorId;
+            feedback.ContextMeta = floorId.HasValue
+                ? $"Auto-attached to route on floor {floorId.Value}"
+                : "Auto-attached to route";
         }
 
         private void ResetDynamicNavigationSmoothing()
@@ -1799,6 +1860,14 @@ namespace NavAR.Presentation
             _navigationSessionService?.ClearSession();
             _lastNavigationSnapshot = null;
             ResetFeedbackState();
+        }
+
+        private void OnSkipFeedback()
+        {
+            _navigationSessionService?.ClearSession();
+            _lastNavigationSnapshot = null;
+            ResetFeedbackState();
+            SetState(AppState.Home);
         }
 
         private void OnOpenHelpPanel()
@@ -2086,6 +2155,7 @@ namespace NavAR.Presentation
             _stateManager.Context?.ClearSession();
             ResetNavigationServiceReferences();
             RequestFullSceneReset();
+            PrepareFeedbackContext();
             _stateManager.ChangeState(nextState);
         }
 

@@ -25,6 +25,8 @@ namespace NavAR.Presentation.Controllers
             public int Rating { get; set; }
             public HashSet<string> SelectedChips { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public string Comment { get; set; } = string.Empty;
+            public string ContextTitle { get; set; } = "No active route";
+            public string ContextMeta { get; set; } = "Optional report context";
         }
 
         public static FeedbackState Feedback { get; } = new FeedbackState();
@@ -336,12 +338,16 @@ namespace NavAR.Presentation.Controllers
             VisualElement content,
             Action<AppState> setState,
             Func<AppState> getLastNonOverlayState,
-            Action onSubmitFeedback
+            Action onSubmitFeedback,
+            Action onSkipFeedback
         )
         {
             var backButton = content.Q<Button>("BtnBackFeedback");
             var submitButton = content.Q<Button>("BtnSubmitFeedback");
+            var skipButton = content.Q<Button>("BtnSkipFeedback");
             var commentInput = content.Q<TextField>("FeedbackCommentInput");
+            var contextTitle = content.Q<Label>("FeedbackContextTitle");
+            var contextMeta = content.Q<Label>("FeedbackContextMeta");
 
             var starButtons = new List<Button>
             {
@@ -362,23 +368,21 @@ namespace NavAR.Presentation.Controllers
                 { "other", content.Q<Button>("ChipOther") }
             };
 
-            if (Feedback.Rating <= 0)
+            if (contextTitle != null)
             {
-                Feedback.Rating = ResolveStarRating(starButtons);
+                contextTitle.text = string.IsNullOrWhiteSpace(Feedback.ContextTitle)
+                    ? "No active route"
+                    : Feedback.ContextTitle;
+            }
+
+            if (contextMeta != null)
+            {
+                contextMeta.text = string.IsNullOrWhiteSpace(Feedback.ContextMeta)
+                    ? "Optional report context"
+                    : Feedback.ContextMeta;
             }
 
             SetStarRating(starButtons, Feedback.Rating);
-
-            if (Feedback.SelectedChips.Count == 0)
-            {
-                foreach (var pair in chipButtons)
-                {
-                    if (pair.Value != null && pair.Value.ClassListContains(FeedbackChipActiveClass))
-                    {
-                        Feedback.SelectedChips.Add(pair.Key);
-                    }
-                }
-            }
 
             SetChipSelection(chipButtons, Feedback.SelectedChips);
 
@@ -437,7 +441,7 @@ namespace NavAR.Presentation.Controllers
 
             if (backButton != null)
             {
-                backButton.clicked += () => setState(getLastNonOverlayState());
+                backButton.clicked += () => onSkipFeedback?.Invoke();
             }
 
             if (submitButton != null)
@@ -448,20 +452,11 @@ namespace NavAR.Presentation.Controllers
                     setState(AppState.Home);
                 };
             }
-        }
 
-        private static int ResolveStarRating(IReadOnlyList<Button> starButtons)
-        {
-            var rating = 0;
-            foreach (var button in starButtons)
+            if (skipButton != null)
             {
-                if (button != null && button.ClassListContains(FeedbackStarOnClass))
-                {
-                    rating++;
-                }
+                skipButton.clicked += () => onSkipFeedback?.Invoke();
             }
-
-            return rating;
         }
 
         private static void SetStarRating(IReadOnlyList<Button> starButtons, int rating)

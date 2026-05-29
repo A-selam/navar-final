@@ -36,6 +36,8 @@ namespace NavAR.Presentation
         private bool _arSessionWasEnabled;
         private bool _isOpen;
 
+        public bool IsOpen => _isOpen;
+
         public void OpenOutdoorMap()
         {
             Debug.Log("OutdoorMapController: OpenOutdoorMap requested.");

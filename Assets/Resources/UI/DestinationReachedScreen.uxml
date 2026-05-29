@@ -16,6 +16,7 @@
             </ui:VisualElement>
 
             <ui:Button name="BtnReturnHomeFromDestinationReached" text="Return to Home" class="context-primary-button" />
+            <ui:Button name="BtnFeedbackFromDestinationReached" text="Give Feedback" class="context-secondary-button" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
