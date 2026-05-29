@@ -43,16 +43,24 @@ namespace NavAR.Presentation.Controllers
             VisualElement content,
             Action<AppState> setState,
             Action onViewHelp,
-            Action onLaunchTutorial
+            Action onLaunchTutorial,
+            Action onOutdoorNavigation
         )
         {
             var startBtn = content.Q<Button>("BtnStartNavigation");
+            var outdoorButton = content.Q<Button>("BtnOutdoorNavigation");
             var helpButton = content.Q<Button>("BtnViewHelp");
             var tutorialButton = content.Q<Button>("BtnLaunchTutorial");
 
             if (startBtn != null)
             {
                 startBtn.clicked += () => setState(AppState.Explore); // Changed from QrScanning to Explore/DestinationSelection
+            }
+
+            if (outdoorButton != null)
+            {
+                outdoorButton.RegisterCallback<PointerUpEvent>(_ => onOutdoorNavigation?.Invoke());
+                outdoorButton.clicked += () => onOutdoorNavigation?.Invoke();
             }
 
             if (helpButton != null)

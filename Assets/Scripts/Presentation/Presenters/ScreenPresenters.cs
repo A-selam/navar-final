@@ -27,17 +27,18 @@ namespace NavAR.Presentation.Presenters
         private readonly Action<AppState> _setState;
         private readonly Action _onViewHelp;
         private readonly Action _onLaunchTutorial;
+        private readonly Action _onOutdoorNavigation;
         public AppState State => AppState.Home;
-        public HomeScreenPresenter(VisualTreeAsset asset, Action<AppState> setState, Action onViewHelp, Action onLaunchTutorial)
+        public HomeScreenPresenter(VisualTreeAsset asset, Action<AppState> setState, Action onViewHelp, Action onLaunchTutorial, Action onOutdoorNavigation)
         {
-            _asset = asset; _setState = setState; _onViewHelp = onViewHelp; _onLaunchTutorial = onLaunchTutorial;
+            _asset = asset; _setState = setState; _onViewHelp = onViewHelp; _onLaunchTutorial = onLaunchTutorial; _onOutdoorNavigation = onOutdoorNavigation;
         }
         public void Show(VisualElement container)
         {
             var instance = _asset.Instantiate();
             instance.style.flexGrow = 1;
             container.Add(instance);
-            ScreenBinders.WireHome(container, _setState, _onViewHelp, _onLaunchTutorial);
+            ScreenBinders.WireHome(container, _setState, _onViewHelp, _onLaunchTutorial, _onOutdoorNavigation);
         }
     }
 
