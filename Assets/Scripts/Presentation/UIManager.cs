@@ -105,6 +105,9 @@ namespace NavAR.Presentation
         [Header("Navigation Markers")]
         [SerializeField] private NavigationMarkerManager markerManager;
 
+        [Header("Feedback Panel")]
+        [SerializeField] private FeedbackController feedbackController;
+
         [Header("Diagnostics")]
         [SerializeField] private bool enableUiDiagnostics = true;
 
@@ -352,7 +355,7 @@ namespace NavAR.Presentation
                 [AppState.Navigating] = new NavigatingScreenPresenter(arNavigationAsset, SetState, () => _lastNonOverlayState, OnToggleVoiceGuidance, OnOpenFloorMap, EndNavigationEarly),
                 [AppState.PositionLost] = new PositionLostScreenPresenter(positionLostAsset, SetState),
                 [AppState.Settings] = new SettingsScreenPresenter(settingsScreenAsset, SetState, null, OnOpenAboutPanel, OnOpenHelpPanel, ApplySettings),
-                [AppState.Feedback] = new FeedbackScreenPresenter(feedbackScreenAsset, SetState, () => _lastNonOverlayState, OnSubmitFeedback)
+                [AppState.Feedback] = new FeedbackScreenPresenter(feedbackScreenAsset, SetState, () => _lastNonOverlayState, () => _stateManager?.Context, OnSubmitFeedback)
             };
         }
 
@@ -1318,9 +1321,19 @@ namespace NavAR.Presentation
                 return;
             }
 
+            if (TryCloseOutdoorMap())
+            {
+                return;
+            }
+
             if (_stateManager.CurrentState == AppState.Home)
             {
                 ShowExitPrompt();
+                return;
+            }
+
+            if (TryHandleBackForCurrentState())
+            {
                 return;
             }
 
@@ -1339,6 +1352,55 @@ namespace NavAR.Presentation
             {
                 _isRestoringHistory = false;
             }
+        }
+
+        private bool TryHandleBackForCurrentState()
+        {
+            var currentState = _stateManager.CurrentState;
+            switch (currentState)
+            {
+                case AppState.Navigating:
+                    EndNavigationEarly();
+                    return true;
+
+                case AppState.Feedback:
+                    SetState(AppState.Home);
+                    return true;
+
+                case AppState.DestinationReached:
+                    ReturnHomeFromDestinationReached();
+                    return true;
+
+                case AppState.QrScanning:
+                    SetState(_stateManager.Context?.CurrentDestination != null ? AppState.Explore : AppState.Home);
+                    return true;
+
+                case AppState.Permission:
+                    SetState(_stateManager.Context?.CurrentDestination != null ? AppState.QrScanning : AppState.Home);
+                    return true;
+
+                case AppState.PositionLost:
+                    SetState(_navigationProgressTracker != null && _navigationProgressTracker.HasActiveRoute
+                        ? AppState.Navigating
+                        : AppState.Home);
+                    return true;
+
+                case AppState.FloorTransition:
+                    SetState(AppState.Navigating);
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool TryCloseOutdoorMap()
+        {
+            if (outdoorMapController == null)
+            {
+                outdoorMapController = FindObjectOfType<OutdoorMapController>();
+            }
+
+            return outdoorMapController != null && outdoorMapController.TryCloseOutdoorMap();
         }
 
         private void RestoreHistoryEntry(UiHistoryEntry entry)
@@ -2098,6 +2160,10 @@ namespace NavAR.Presentation
             var sessionId = _navigationSessionService?.ActiveSessionId ?? string.Empty;
             var destinationId = destination?.destination_id ?? _navigationSessionService?.DestinationId ?? string.Empty;
             var destinationName = destination?.name ?? string.Empty;
+            var startAnchor = _stateManager.Context?.LastScannedAnchor;
+            var startName = !string.IsNullOrWhiteSpace(startAnchor?.location_name)
+                ? startAnchor.location_name
+                : startAnchor?.qr_id ?? string.Empty;
 
             _lastNavigationSnapshot = new NavigationCompletionSnapshot
             {
@@ -2108,6 +2174,8 @@ namespace NavAR.Presentation
             };
 
             _navigationSessionService?.MarkCompleted(status);
+            ResetFeedbackState();
+            feedbackController?.OpenFeedbackScreen(startName, destinationName);
             _stateManager.ChangeState(AppState.Feedback);
 
             var sessionPayload = new NavigationSessionPayload

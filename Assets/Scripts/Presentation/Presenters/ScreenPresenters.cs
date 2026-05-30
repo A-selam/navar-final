@@ -189,18 +189,19 @@ namespace NavAR.Presentation.Presenters
         private readonly VisualTreeAsset _asset;
         private readonly Action<AppState> _setState;
         private readonly Func<AppState> _getLastState;
+        private readonly Func<NavigationContext> _getNavigationContext;
         private readonly Action _onSubmit;
         public AppState State => AppState.Feedback;
-        public FeedbackScreenPresenter(VisualTreeAsset asset, Action<AppState> setState, Func<AppState> getLastState, Action onSubmit)
+        public FeedbackScreenPresenter(VisualTreeAsset asset, Action<AppState> setState, Func<AppState> getLastState, Func<NavigationContext> getNavigationContext, Action onSubmit)
         {
-            _asset = asset; _setState = setState; _getLastState = getLastState; _onSubmit = onSubmit;
+            _asset = asset; _setState = setState; _getLastState = getLastState; _getNavigationContext = getNavigationContext; _onSubmit = onSubmit;
         }
         public void Show(VisualElement container)
         {
             var instance = _asset.Instantiate();
             instance.style.flexGrow = 1;
             container.Add(instance);
-            ScreenBinders.WireFeedback(container, _setState, _getLastState, _onSubmit);
+            ScreenBinders.WireFeedback(container, _setState, _getLastState, _getNavigationContext, _onSubmit);
         }
     }
 

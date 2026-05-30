@@ -1,6 +1,9 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 #if UNITY_ANDROID && !UNITY_EDITOR
 using UnityEngine.Android;
 #endif
@@ -35,6 +38,7 @@ namespace NavAR.Presentation
         private Coroutine _openRoutine;
         private bool _arSessionWasEnabled;
         private bool _isOpen;
+        public bool IsOpen => _isOpen || _openRoutine != null;
 
         public void OpenOutdoorMap()
         {
@@ -59,6 +63,38 @@ namespace NavAR.Presentation
             DestroyWebView();
             ResumeArSession();
             _isOpen = false;
+        }
+
+        public bool TryCloseOutdoorMap()
+        {
+            if (!IsOpen)
+            {
+                return false;
+            }
+
+            CloseOutdoorMap();
+            return true;
+        }
+
+        private void Update()
+        {
+            if (!IsOpen)
+            {
+                return;
+            }
+
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+            {
+                CloseOutdoorMap();
+            }
+#else
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                CloseOutdoorMap();
+            }
+#endif
         }
 
         private IEnumerator OpenOutdoorMapRoutine()
