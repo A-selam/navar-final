@@ -153,6 +153,7 @@ namespace NavAR.Presentation
         private INavigationContextProvider _navigationContextProvider;
         private INavigationProgressTracker _navigationProgressTracker;
         private IGuidanceCueService _guidanceCueService;
+        private ITextToSpeechService _textToSpeechService;
         private Coroutine _dynamicNavigationRoutine;
         private string _latestInstructionText = "Continue.";
         private NavigationSessionService _navigationSessionService;
@@ -303,7 +304,8 @@ namespace NavAR.Presentation
             _navigationProgressTracker ??= new NavigationProgressTracker();
             _navigationProgressTracker.OnGuidanceEvent -= HandleGuidanceEvent;
             _navigationProgressTracker.OnGuidanceEvent += HandleGuidanceEvent;
-            _guidanceCueService ??= new GuidanceCueService(this);
+            _textToSpeechService ??= new PlatformTextToSpeechService();
+            _guidanceCueService ??= new GuidanceCueService(this, _textToSpeechService);
             services?.Register(_navigationCoordinator);
             services?.Register(_floorTransitionCoordinator);
         }
@@ -644,6 +646,9 @@ namespace NavAR.Presentation
             {
                 btnOutdoorNavigation.onClick.RemoveListener(OnOutdoorNavigationClicked);
             }
+
+            _textToSpeechService?.Dispose();
+            _textToSpeechService = null;
         }
 
         private void EnsureSettingsLoaded()
@@ -1489,6 +1494,11 @@ namespace NavAR.Presentation
         private void OnToggleVoiceGuidance()
         {
             ScreenBinders.Settings.VoiceGuidanceEnabled = !ScreenBinders.Settings.VoiceGuidanceEnabled;
+            if (!ScreenBinders.Settings.VoiceGuidanceEnabled)
+            {
+                _textToSpeechService?.Stop();
+            }
+            ApplySettings(ScreenBinders.Settings);
             Debug.Log($"Voice guidance {(ScreenBinders.Settings.VoiceGuidanceEnabled ? "enabled" : "disabled")}.");
         }
 
@@ -1594,7 +1604,11 @@ namespace NavAR.Presentation
             {
                 try
                 {
-                    _hybridCalculator.CalculatePathWithContext(startPos, targetPos, floorId, destinationFloorId, destinationNodeIds);
+                    var graphPath = _hybridCalculator.CalculatePathWithContext(startPos, targetPos, floorId, destinationFloorId, destinationNodeIds);
+                    if (graphPath != null && graphPath.Count >= 2)
+                    {
+                        return graphPath;
+                    }
                 }
                 catch (Exception ex)
                 {

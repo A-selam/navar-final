@@ -19,7 +19,8 @@ namespace NavAR.Core.Interfaces
         SegmentReversed = 3,
         OffRouteDetected = 4,
         RouteRecalculated = 5,
-        DestinationReached = 6
+        DestinationReached = 6,
+        RouteInstructionUpdated = 7
     }
 
     public sealed class GuidanceEvent
@@ -42,6 +43,12 @@ namespace NavAR.Core.Interfaces
     {
         void HandleGuidanceEvent(GuidanceEvent evt, bool voiceEnabled, bool hapticsEnabled);
         void Reset();
+    }
+
+    public interface ITextToSpeechService : IDisposable
+    {
+        void Speak(string text);
+        void Stop();
     }
 
     public interface INavigationProgressTracker

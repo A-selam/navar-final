@@ -31,31 +31,46 @@ namespace NavAR.Data
 
         private void LoadExtractedData()
         {
-            // Load the JSON file we extracted and placed in the Resources folder. 
-            // Note: Do not include ".json" in the string!
-            TextAsset jsonFile = Resources.Load<TextAsset>("Floor0_Data");
+            var floorAssets = Resources.LoadAll<TextAsset>("")
+                .Where(asset => asset != null && asset.name.StartsWith("Floor"))
+                .OrderBy(asset => asset.name)
+                .ToList();
 
-            if (jsonFile != null)
+            if (floorAssets.Count > 0)
             {
-                // Parse the JSON back into C# objects
-                var data = JsonUtility.FromJson<MapDataWrapper>(jsonFile.text);
-                
-                if (data != null)
+                var anchors = new List<QRAnchor>();
+                var destinations = new List<Destination>();
+                var nodes = new List<GraphNode>();
+                var edges = new List<GraphEdge>();
+
+                foreach (var asset in floorAssets)
                 {
-                    _mockAnchors = data.anchors;
-                    _mockDestinations = data.destinations;
-                    _mockNodes = data.nodes ?? new List<GraphNode>();
-                    _mockEdges = data.edges ?? new List<GraphEdge>();
-                    _nodesById = _mockNodes
-                        .Where(n => !string.IsNullOrWhiteSpace(n.node_id))
-                        .GroupBy(n => n.node_id)
-                        .ToDictionary(g => g.Key, g => g.First());
-                    Debug.Log($"[MockMapRepository] Loaded {_mockDestinations.Count} Destinations and {_mockAnchors.Count} QR Anchors from JSON.");
+                    var data = JsonUtility.FromJson<MapDataWrapper>(asset.text);
+                    if (data == null)
+                    {
+                        Debug.LogWarning($"[MockMapRepository] Failed to parse {asset.name}, skipping.");
+                        continue;
+                    }
+
+                    if (data.anchors != null) anchors.AddRange(data.anchors);
+                    if (data.destinations != null) destinations.AddRange(data.destinations);
+                    if (data.nodes != null) nodes.AddRange(data.nodes);
+                    if (data.edges != null) edges.AddRange(data.edges);
                 }
+
+                _mockAnchors = anchors;
+                _mockDestinations = destinations;
+                _mockNodes = nodes;
+                _mockEdges = edges;
+                _nodesById = _mockNodes
+                    .Where(n => !string.IsNullOrWhiteSpace(n.node_id))
+                    .GroupBy(n => n.node_id)
+                    .ToDictionary(g => g.Key, g => g.First());
+                Debug.Log($"[MockMapRepository] Loaded {_mockDestinations.Count} Destinations, {_mockAnchors.Count} QR Anchors, {_mockNodes.Count} nodes, and {_mockEdges.Count} edges from {floorAssets.Count} JSON resources.");
             }
             else
             {
-                Debug.LogError("[MockMapRepository] Could not find Floor0_Data.json in the Resources folder!");
+                Debug.LogError("[MockMapRepository] Could not find any Floor*_Data.json files in the Resources folder.");
             }
         }
 

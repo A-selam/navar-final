@@ -23,6 +23,7 @@ namespace NavAR.Core.Navigation
         private bool _offRouteRaised;
         private bool _canCompleteNavigation = true;
         private bool _destinationReachedRaised;
+        private string _lastInstructionText;
 
         public event Action<GuidanceEvent> OnGuidanceEvent;
         public bool HasActiveRoute => _route.Count >= 2;
@@ -64,6 +65,7 @@ namespace NavAR.Core.Navigation
             _offRouteRaised = false;
             _canCompleteNavigation = canCompleteNavigation;
             _destinationReachedRaised = false;
+            _lastInstructionText = null;
         }
 
         public void InitializeRouteFromPose(List<Vector3> routeCorners, Vector3 userWorldPosition, Vector3 userForward, bool canCompleteNavigation = true)
@@ -102,6 +104,7 @@ namespace NavAR.Core.Navigation
             _offRouteRaised = false;
             _canCompleteNavigation = true;
             _destinationReachedRaised = false;
+            _lastInstructionText = null;
         }
 
         public void Tick(Vector3 userWorldPosition, Vector3 userForward, float deltaTime)
@@ -143,6 +146,7 @@ namespace NavAR.Core.Navigation
             {
                 var targetNode = _route[targetNodeIndex];
                 var distToTarget = HorizontalDistance(userWorldPosition, targetNode);
+                EmitInstructionUpdate(targetNodeIndex, distToTarget, userWorldPosition);
 
                 if (distToTarget <= _approachDistanceMeters && _lastApproachNodeIndex != targetNodeIndex)
                 {
@@ -321,6 +325,49 @@ namespace NavAR.Core.Navigation
             }
 
             return useNowWording ? "Turn right now." : "Turn right";
+        }
+
+        private void EmitInstructionUpdate(int targetNodeIndex, float distToTarget, Vector3 userWorldPosition)
+        {
+            var message = BuildInstructionMessage(targetNodeIndex, distToTarget);
+            if (string.IsNullOrWhiteSpace(message)
+                || string.Equals(message, _lastInstructionText, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _lastInstructionText = message;
+            Emit(GuidanceEventType.RouteInstructionUpdated, message, GuidanceSeverity.Info, distToTarget, targetNodeIndex, userWorldPosition);
+        }
+
+        private string BuildInstructionMessage(int targetNodeIndex, float distToTarget)
+        {
+            if (_canCompleteNavigation && _isForward && targetNodeIndex == _route.Count - 1)
+            {
+                return distToTarget <= _reachedDistanceMeters
+                    ? "Destination reached."
+                    : $"Continue for {FormatDistance(distToTarget)} to your destination.";
+            }
+
+            var turnNow = BuildTurnMessage(targetNodeIndex, _isForward, useNowWording: true);
+            if (distToTarget <= _reachedDistanceMeters && !string.IsNullOrWhiteSpace(turnNow))
+            {
+                return turnNow;
+            }
+
+            var turnAhead = BuildTurnMessage(targetNodeIndex, _isForward, useNowWording: false);
+            if (!string.IsNullOrWhiteSpace(turnAhead))
+            {
+                return $"{turnAhead} in {FormatDistance(distToTarget)}.";
+            }
+
+            return $"Continue for {FormatDistance(distToTarget)}.";
+        }
+
+        private static string FormatDistance(float distanceMeters)
+        {
+            var rounded = Mathf.RoundToInt(Mathf.Max(1f, distanceMeters));
+            return rounded == 1 ? "1 meter" : $"{rounded} meters";
         }
 
         private static Vector3 Flatten(Vector3 value)
