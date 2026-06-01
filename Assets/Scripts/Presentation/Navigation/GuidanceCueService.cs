@@ -6,10 +6,13 @@ namespace NavAR.Presentation.Navigation
     public sealed class GuidanceCueService : IGuidanceCueService
     {
         private readonly INavigationInstructionPresenter _instructionPresenter;
+        private readonly ITextToSpeechService _textToSpeechService;
+        private string _lastSpokenMessage;
 
-        public GuidanceCueService(INavigationInstructionPresenter instructionPresenter)
+        public GuidanceCueService(INavigationInstructionPresenter instructionPresenter, ITextToSpeechService textToSpeechService)
         {
             _instructionPresenter = instructionPresenter;
+            _textToSpeechService = textToSpeechService;
         }
 
         public void HandleGuidanceEvent(GuidanceEvent evt, bool voiceEnabled, bool hapticsEnabled)
@@ -23,18 +26,14 @@ namespace NavAR.Presentation.Navigation
             var shouldSpeak = voiceEnabled && ShouldEmitVoice(evt, isDirectionalCue);
             var shouldVibrate = hapticsEnabled && ShouldEmitHaptics(evt, isDirectionalCue);
 
-            if (!string.IsNullOrWhiteSpace(evt.Message))
+            if (ShouldDisplayInstruction(evt))
             {
                 _instructionPresenter?.SetInstruction(evt.Message, evt.Severity, evt.DistanceMeters);
             }
 
             if (shouldSpeak)
             {
-                #if UNITY_EDITOR
-                Debug.Log($"[Guidance][VoiceSim][Editor] {evt.Message}");
-                #else
-                Debug.Log($"[Guidance][Voice] {evt.Message}");
-                #endif
+                Speak(evt.Message);
             }
 
             if (shouldVibrate)
@@ -45,7 +44,21 @@ namespace NavAR.Presentation.Navigation
 
         public void Reset()
         {
+            _lastSpokenMessage = null;
+            _textToSpeechService?.Stop();
             _instructionPresenter?.ClearInstruction();
+        }
+
+        private void Speak(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message)
+                || string.Equals(_lastSpokenMessage, message, System.StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _lastSpokenMessage = message;
+            _textToSpeechService?.Speak(message);
         }
 
         private static bool IsDirectionalCue(GuidanceEvent evt)
@@ -60,6 +73,12 @@ namespace NavAR.Presentation.Navigation
                    || message.Contains("turn right")
                    || message.Contains("u-turn")
                    || message.Contains("uturn");
+        }
+
+        private static bool ShouldDisplayInstruction(GuidanceEvent evt)
+        {
+            return evt.EventType != GuidanceEventType.ReachedNode
+                   && !string.IsNullOrWhiteSpace(evt.Message);
         }
 
         private static bool ShouldEmitVoice(GuidanceEvent evt, bool isDirectionalCue)
