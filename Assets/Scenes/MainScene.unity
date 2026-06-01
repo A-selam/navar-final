@@ -382,7 +382,7 @@ MonoBehaviour:
   arQrScanner: {fileID: 1152749042}
   useSQLiteRepository: 1
   enableBackendSync: 1
-  backendBaseUrl: https://webhook.site/e737ee67-2277-4fbc-ba7a-15e12ae474dc
+  backendBaseUrl: https://navar-website.onrender.com/api
 --- !u!4 &523187543
 Transform:
   m_ObjectHideFlags: 0
@@ -412,7 +412,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NavAR.Infrastructure.Navigation.FloorSceneTransitionService
   floorScenePrefix: Floor_
   floorSceneSuffix: 
-  unloadOtherFloorScenes: 0
+  unloadOtherFloorScenes: 1
   setLoadedFloorActive: 1
   logVerbose: 1
   mainSceneName: MainScene
@@ -447,10 +447,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NavAR.Presentation.OutdoorMapController
   outdoorMapUrl: https://outside-navigation.vercel.app/
+  useSafeAreaMargins: 1
   extraLeftMarginPixels: 0
   extraTopMarginPixels: 24
   extraRightMarginPixels: 0
   extraBottomMarginPixels: 24
+  refreshMapLayoutAfterLoad: 1
   arSession: {fileID: 788005199}
 --- !u!4 &544399320
 Transform:
@@ -590,7 +592,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57b50220db897f24fa881e69045df6b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NavAR.Infrastructure.ArPathRenderer
-  fixedPathHeightMeters: 1
+  pathElevationOffset: 0.05
 --- !u!120 &832575521
 LineRenderer:
   serializedVersion: 2
