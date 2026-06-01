@@ -143,7 +143,8 @@ namespace NavAR.Infrastructure.Backend
 
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    Debug.LogWarning($"[BackendApiClient] {label} request failed ({request.responseCode}): {request.error}");
+                    var responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+                    Debug.LogWarning($"[BackendApiClient] {label} request failed ({request.responseCode}): {request.error}. Response: {responseText}. Payload: {json}");
                     if (request.result == UnityWebRequest.Result.ConnectionError
                         || request.result == UnityWebRequest.Result.DataProcessingError
                         || request.responseCode == 0)

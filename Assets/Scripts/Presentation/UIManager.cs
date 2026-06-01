@@ -270,6 +270,7 @@ namespace NavAR.Presentation
                 _floorTransitionService,
                 EnsureNavigationServices,
                 CalculatePathForCurrentFloor,
+                ResolveRecalcTargetPosition,
                 (path, setNavigating) => StartCoroutine(WaitForAndDrawPath(path, setNavigating)),
                 _navigationSequencer,
                 ResetNavigationServiceReferences,
@@ -1540,13 +1541,30 @@ namespace NavAR.Presentation
                 }
             }
 
-            var renderPath = CalculateNavMeshRenderPath(startPos, targetPos);
+            var renderTargetPos = ResolveRenderTargetPosition(targetPos);
+            var renderPath = CalculateNavMeshRenderPath(startPos, renderTargetPos);
             if (renderPath != null && renderPath.Count > 0)
             {
                 return renderPath;
             }
 
-            return _pathCalculator != null ? _pathCalculator.CalculatePath(startPos, targetPos) : null;
+            return _pathCalculator != null ? _pathCalculator.CalculatePath(startPos, renderTargetPos) : null;
+        }
+
+        private Vector3 ResolveRenderTargetPosition(Vector3 destinationPos)
+        {
+            if (_hybridCalculator != null
+                && _hybridCalculator.TryGetPendingTransition(
+                    out _,
+                    out _,
+                    out _,
+                    out var transitionNodePosition,
+                    out _))
+            {
+                return transitionNodePosition;
+            }
+
+            return destinationPos;
         }
 
         private List<Vector3> CalculateNavMeshRenderPath(Vector3 startPos, Vector3 targetPos)
@@ -1713,7 +1731,8 @@ namespace NavAR.Presentation
             {
                 session_id = _navigationSessionService.ActiveSessionId,
                 qr_id = anchorId,
-                destination_node_id = destinationId
+                destination_node_id = destinationId,
+                started_at = _navigationSessionService.StartTimeUtc.ToString("o")
             };
 
             Debug.Log($"[Navigation][SessionStart] {JsonUtility.ToJson(payload, true)}");
@@ -1764,14 +1783,7 @@ namespace NavAR.Presentation
                 return;
             }
 
-            if (_hybridCalculator == null || _stateManager?.Context == null)
-            {
-                markerManager.UpdateMarkers(null, null);
-                return;
-            }
-
-            var routeNodes = _hybridCalculator.GetLastNodePath();
-            if (routeNodes == null || routeNodes.Count == 0)
+            if (_stateManager?.Context == null)
             {
                 markerManager.UpdateMarkers(null, null);
                 return;
@@ -1781,10 +1793,36 @@ namespace NavAR.Presentation
             Vector3? targetWorldPosition = null;
             Vector3? stairWorldPosition = null;
 
-            var targetNode = routeNodes[routeNodes.Count - 1];
-            if (targetNode != null && targetNode.floor_id == currentFloorId)
+            var destination = _stateManager.Context.CurrentDestination;
+            if (destination != null && destination.floor_id == currentFloorId)
             {
-                targetWorldPosition = new Vector3(targetNode.x, targetNode.y, targetNode.z);
+                var destinationPos = TryResolveDestinationNodePosition(destination.entrance_node_ids);
+                if (destinationPos.HasValue)
+                {
+                    targetWorldPosition = destinationPos.Value;
+                }
+            }
+
+            if (_hybridCalculator == null)
+            {
+                markerManager.UpdateMarkers(targetWorldPosition, null);
+                return;
+            }
+
+            var routeNodes = _hybridCalculator.GetLastNodePath();
+            if (routeNodes == null || routeNodes.Count == 0)
+            {
+                markerManager.UpdateMarkers(targetWorldPosition, null);
+                return;
+            }
+
+            if (!targetWorldPosition.HasValue)
+            {
+                var targetNode = routeNodes[routeNodes.Count - 1];
+                if (targetNode != null && targetNode.floor_id == currentFloorId)
+                {
+                    targetWorldPosition = new Vector3(targetNode.x, targetNode.y, targetNode.z);
+                }
             }
 
             for (var i = 0; i < routeNodes.Count - 1; i++)
@@ -1941,6 +1979,7 @@ namespace NavAR.Presentation
                 var rawPosition = cameraTransform.position;
                 var rawForward = cameraTransform.forward;
                 var targetPos = ResolveRecalcTargetPosition(_stateManager.Context.CurrentDestination);
+                var renderTargetPos = ResolveRenderTargetPosition(targetPos);
 
                 _navigationProgressTracker?.Tick(rawPosition, rawForward, Time.deltaTime);
 
@@ -1962,7 +2001,7 @@ namespace NavAR.Presentation
                 var shouldUpdate = Vector3.Distance(_lastDynamicUpdatePosition, smoothedPosition) > 0.05f;
                 if (shouldUpdate)
                 {
-                    var renderPath = CalculateNavMeshRenderPath(smoothedPosition, targetPos);
+                    var renderPath = CalculateNavMeshRenderPath(smoothedPosition, renderTargetPos);
                     if (renderPath != null && renderPath.Count >= 2)
                     {
                         _pathRenderer.DrawPath(renderPath);
@@ -2116,7 +2155,8 @@ namespace NavAR.Presentation
                 qr_id = _stateManager.Context?.LastScannedAnchor?.qr_id ?? string.Empty,
                 destination_node_id = destinationId,
                 visited_node_ids = ToIntNodeIds(_navigationSessionService?.GetVisitedNodeIds()),
-                ended_at = DateTime.UtcNow.ToString("o")
+                ended_at = DateTime.UtcNow.ToString("o"),
+                status = status.ToString()
             };
             Debug.Log($"[Navigation][Metrics] {JsonUtility.ToJson(sessionPayload, true)}");
             if (status == SessionStatus.Cancelled)

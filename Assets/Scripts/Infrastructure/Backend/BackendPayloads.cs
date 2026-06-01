@@ -9,6 +9,7 @@ namespace NavAR.Infrastructure.Backend
         public string session_id;
         public string qr_id;
         public string destination_node_id;
+        public string started_at;
     }
 
     [Serializable]
@@ -19,6 +20,7 @@ namespace NavAR.Infrastructure.Backend
         public int[] visited_node_ids;
         public string destination_node_id;
         public string ended_at;
+        public string status;
     }
 
     [Serializable]

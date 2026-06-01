@@ -17,6 +17,7 @@ namespace NavAR.Presentation.Navigation
         private readonly Func<bool> _ensureNavigationServices;
         private readonly Func<Vector3, Vector3, int, int?, IReadOnlyList<string>, List<Vector3>> _calculatePathForCurrentFloor;
         private readonly Action<List<Vector3>, bool> _drawPathAsync;
+        private readonly Func<Destination, Vector3> _resolveTargetPosition;
         private readonly NavigationSequencer _navigationSequencer;
         private readonly Action _resetNavigationServiceReferences;
         private readonly Action _snapXrOriginToPendingTransitionLanding;
@@ -30,6 +31,7 @@ namespace NavAR.Presentation.Navigation
             IFloorSceneTransitionService floorTransitionService,
             Func<bool> ensureNavigationServices,
             Func<Vector3, Vector3, int, int?, IReadOnlyList<string>, List<Vector3>> calculatePathForCurrentFloor,
+            Func<Destination, Vector3> resolveTargetPosition,
             Action<List<Vector3>, bool> drawPathAsync,
             NavigationSequencer navigationSequencer,
             Action resetNavigationServiceReferences,
@@ -43,6 +45,7 @@ namespace NavAR.Presentation.Navigation
             _floorTransitionService = floorTransitionService;
             _ensureNavigationServices = ensureNavigationServices;
             _calculatePathForCurrentFloor = calculatePathForCurrentFloor;
+            _resolveTargetPosition = resolveTargetPosition;
             _drawPathAsync = drawPathAsync;
             _navigationSequencer = navigationSequencer;
             _resetNavigationServiceReferences = resetNavigationServiceReferences;
@@ -146,7 +149,7 @@ namespace NavAR.Presentation.Navigation
                     var startPos = currentCamera != null
                         ? currentCamera.position
                         : Vector3.zero;
-                    var targetPos = startPos;
+                    var targetPos = _resolveTargetPosition != null ? _resolveTargetPosition(destination) : startPos;
                     var continuationPath = _calculatePathForCurrentFloor(startPos, targetPos, _stateManager.Context.CurrentFloorId, destination.floor_id, destination.entrance_node_ids);
 
                     if (continuationPath != null && continuationPath.Count > 0)
