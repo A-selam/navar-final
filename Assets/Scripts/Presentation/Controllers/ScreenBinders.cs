@@ -336,12 +336,19 @@ namespace NavAR.Presentation.Controllers
             VisualElement content,
             Action<AppState> setState,
             Func<AppState> getLastNonOverlayState,
+            Func<NavigationContext> getNavigationContext,
             Action onSubmitFeedback
         )
         {
             var backButton = content.Q<Button>("BtnBackFeedback");
             var submitButton = content.Q<Button>("BtnSubmitFeedback");
             var commentInput = content.Q<TextField>("FeedbackCommentInput");
+            var sourceLabel = content.Q<Label>("FeedbackSourceValue");
+            var destinationLabel = content.Q<Label>("FeedbackDestinationValue");
+
+            Feedback.Rating = 0;
+            Feedback.SelectedChips.Clear();
+            Feedback.Comment = string.Empty;
 
             var starButtons = new List<Button>
             {
@@ -362,25 +369,10 @@ namespace NavAR.Presentation.Controllers
                 { "other", content.Q<Button>("ChipOther") }
             };
 
-            if (Feedback.Rating <= 0)
-            {
-                Feedback.Rating = ResolveStarRating(starButtons);
-            }
-
             SetStarRating(starButtons, Feedback.Rating);
 
-            if (Feedback.SelectedChips.Count == 0)
-            {
-                foreach (var pair in chipButtons)
-                {
-                    if (pair.Value != null && pair.Value.ClassListContains(FeedbackChipActiveClass))
-                    {
-                        Feedback.SelectedChips.Add(pair.Key);
-                    }
-                }
-            }
-
             SetChipSelection(chipButtons, Feedback.SelectedChips);
+            SetFeedbackRouteLabels(getNavigationContext?.Invoke(), sourceLabel, destinationLabel);
 
             if (commentInput != null)
             {
@@ -437,7 +429,7 @@ namespace NavAR.Presentation.Controllers
 
             if (backButton != null)
             {
-                backButton.clicked += () => setState(getLastNonOverlayState());
+                backButton.clicked += () => setState(AppState.Home);
             }
 
             if (submitButton != null)
@@ -450,18 +442,29 @@ namespace NavAR.Presentation.Controllers
             }
         }
 
-        private static int ResolveStarRating(IReadOnlyList<Button> starButtons)
+        private static void SetFeedbackRouteLabels(NavigationContext context, Label sourceLabel, Label destinationLabel)
         {
-            var rating = 0;
-            foreach (var button in starButtons)
+            if (sourceLabel != null)
             {
-                if (button != null && button.ClassListContains(FeedbackStarOnClass))
-                {
-                    rating++;
-                }
+                var sourceName = !string.IsNullOrWhiteSpace(context?.LastScannedAnchor?.location_name)
+                    ? context.LastScannedAnchor.location_name
+                    : context?.LastScannedAnchor?.qr_id;
+
+                sourceLabel.text = string.IsNullOrWhiteSpace(sourceName)
+                    ? "Source not captured"
+                    : sourceName;
             }
 
-            return rating;
+            if (destinationLabel != null)
+            {
+                var destinationName = !string.IsNullOrWhiteSpace(context?.CurrentDestination?.name)
+                    ? context.CurrentDestination.name
+                    : context?.CurrentDestination?.destination_id;
+
+                destinationLabel.text = string.IsNullOrWhiteSpace(destinationName)
+                    ? "Destination not captured"
+                    : destinationName;
+            }
         }
 
         private static void SetStarRating(IReadOnlyList<Button> starButtons, int rating)

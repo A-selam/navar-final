@@ -15,16 +15,16 @@
 
                 <ui:Label text="OVERALL EXPERIENCE" class="feedback-section-label" />
                 <ui:VisualElement class="feedback-stars">
-                    <ui:Button name="Star1" text="" class="feedback-star feedback-star-on" />
-                    <ui:Button name="Star2" text="" class="feedback-star feedback-star-on" />
-                    <ui:Button name="Star3" text="" class="feedback-star feedback-star-on" />
-                    <ui:Button name="Star4" text="" class="feedback-star feedback-star-on" />
+                    <ui:Button name="Star1" text="" class="feedback-star" />
+                    <ui:Button name="Star2" text="" class="feedback-star" />
+                    <ui:Button name="Star3" text="" class="feedback-star" />
+                    <ui:Button name="Star4" text="" class="feedback-star" />
                     <ui:Button name="Star5" text="" class="feedback-star" />
                 </ui:VisualElement>
 
                 <ui:Label text="What went wrong?" class="feedback-question" />
                 <ui:VisualElement class="feedback-chip-wrap">
-                    <ui:Button name="ChipWrongDirection" text="Wrong direction" class="feedback-chip feedback-chip-active" />
+                    <ui:Button name="ChipWrongDirection" text="Wrong direction" class="feedback-chip" />
                     <ui:Button name="ChipArDrift" text="AR drift" class="feedback-chip" />
                     <ui:Button name="ChipMapInaccuracy" text="Map inaccuracy" class="feedback-chip" />
                     <ui:Button name="ChipLaggingView" text="Lagging view" class="feedback-chip" />
@@ -33,16 +33,17 @@
                 </ui:VisualElement>
 
                 <ui:VisualElement class="feedback-context-card">
-                    <ui:Label text="LOCATION CONTEXT" class="feedback-context-label" />
-                    <ui:Label text="Grand Central Station, Platform 4" class="feedback-context-title" />
+                    <ui:Label text="NAVIGATION CONTEXT" class="feedback-context-label" />
                     <ui:VisualElement class="feedback-context-row">
                         <ui:VisualElement class="feedback-pin-icon" />
-                        <ui:Label text="Auto-attached to report" class="feedback-context-meta" />
+                        <ui:Label text="Source" class="feedback-context-meta" />
                     </ui:VisualElement>
-                </ui:VisualElement>
-
-                <ui:VisualElement class="feedback-image-placeholder">
-                    <ui:VisualElement class="feedback-image-icon" />
+                    <ui:Label name="FeedbackSourceValue" text="Source not captured" class="feedback-context-title" />
+                    <ui:VisualElement class="feedback-context-row">
+                        <ui:VisualElement class="feedback-pin-icon" />
+                        <ui:Label text="Destination" class="feedback-context-meta" />
+                    </ui:VisualElement>
+                    <ui:Label name="FeedbackDestinationValue" text="Destination not captured" class="feedback-context-title feedback-context-title-last" />
                 </ui:VisualElement>
 
                 <ui:Label text="ADDITIONAL COMMENTS" class="feedback-section-label feedback-comments-label" />
